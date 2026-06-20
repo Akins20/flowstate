@@ -1,7 +1,7 @@
-// The Home screen: Header, QuickCapture, Inbox, Now / Next / Later.
-// Visual language: surfaces separate by background + spacing, not borders.
+// The "Today" body: QuickCapture, Inbox, Now / Next / Later.
+// The header/shell (title, Today/Calendar toggle, settings) lives in Shell.jsx.
 import { useState } from 'react';
-import { Clock, Settings, Play, Plus, ChevronRight, ChevronDown, CalendarPlus, AlarmClockOff } from 'lucide-react';
+import { Play, Plus, ChevronRight, ChevronDown, CalendarPlus, AlarmClockOff } from 'lucide-react';
 import {
   isPast,
   inLabel,
@@ -13,41 +13,9 @@ import {
   isActionable,
   FOCUS_PRESETS,
 } from './lib';
-import { TypeIcon, CompleteButton, FOCUS_RING, usePopOnIncrease } from './ui';
+import { TypeIcon, CompleteButton, FOCUS_RING } from './ui';
 
 const sectionLabel = 'text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2';
-
-function Header({ progress, banner, onOpenSettings, reduced }) {
-  const pop = usePopOnIncrease(progress.doneToday, reduced);
-  return (
-    <header className="sticky top-0 z-20 bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-md">
-      <div className="max-w-[600px] mx-auto px-4 pt-3.5 pb-3">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-50 flex items-center gap-2">
-            <Clock size={20} className="text-indigo-600 dark:text-indigo-400" />
-            FlowState
-          </h1>
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`text-sm font-medium text-emerald-700 dark:text-emerald-300 ${pop ? 'fs-pop' : ''}`}
-              title={progress.bestDay ? `Best day: ${progress.bestDay}` : undefined}
-            >
-              {progress.doneToday} done
-            </span>
-            <button
-              onClick={onOpenSettings}
-              aria-label="Settings"
-              className={`p-2 -mr-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-lg ${FOCUS_RING}`}
-            >
-              <Settings size={20} />
-            </button>
-          </div>
-        </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{banner}</p>
-      </div>
-    </header>
-  );
-}
 
 function QuickCapture({ onCapture }) {
   const [text, setText] = useState('');
@@ -62,7 +30,6 @@ function QuickCapture({ onCapture }) {
     <form onSubmit={submit} className="flex items-center gap-1.5 bg-white dark:bg-gray-900 rounded-2xl shadow-sm px-3 py-1.5">
       <Plus size={18} className="text-gray-400 dark:text-gray-500 shrink-0" />
       <input
-        autoFocus
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Brain dump — type it, hit enter, sort it later"
@@ -114,10 +81,7 @@ function Inbox({ items, onOpenEdit, onComplete, reduced }) {
         {shown.map((item) => (
           <div key={item.id} className="flex items-center gap-2.5 bg-white dark:bg-gray-900 rounded-xl pl-2 pr-2.5 py-1.5">
             <CompleteButton checked={false} onClick={() => onComplete(item)} reduced={reduced} label={`Done: ${item.title}`} />
-            <button
-              onClick={() => onOpenEdit(item)}
-              className={`flex-1 min-w-0 flex items-center gap-2.5 text-left rounded-lg py-1 ${FOCUS_RING}`}
-            >
+            <button onClick={() => onOpenEdit(item)} className={`flex-1 min-w-0 flex items-center gap-2.5 text-left rounded-lg py-1 ${FOCUS_RING}`}>
               <TypeIcon type={item.type} size={16} />
               <span className="truncate text-gray-800 dark:text-gray-100">{item.title}</span>
             </button>
@@ -131,15 +95,19 @@ function Inbox({ items, onOpenEdit, onComplete, reduced }) {
         ))}
       </div>
       {items.length > 5 && (
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className={`mt-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded ${FOCUS_RING}`}
-        >
+        <button onClick={() => setExpanded((v) => !v)} className={`mt-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded ${FOCUS_RING}`}>
           {expanded ? 'Show less' : `and ${items.length - 5} more`}
         </button>
       )}
     </section>
   );
+}
+
+// "in X" from the item's own timestamp.
+function nowMsFor(item) {
+  const [y, m, d] = item.date.split('-').map(Number);
+  const [hh, mm] = item.time.split(':').map(Number);
+  return new Date(y, m - 1, d, hh, mm).getTime();
 }
 
 function NowCard({ item, nowMs, settings, onStart, onComplete, onToggleSubtask, onOpenEdit, onMoveToday, onSnooze, reduced }) {
@@ -203,10 +171,7 @@ function NowCard({ item, nowMs, settings, onStart, onComplete, onToggleSubtask, 
             >
               <Play size={18} /> <span className="truncate">{primaryLabel}</span>
             </button>
-            <button
-              onClick={() => setShowPresets((v) => !v)}
-              className={`mt-1.5 w-full text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 py-2 rounded-lg ${FOCUS_RING}`}
-            >
+            <button onClick={() => setShowPresets((v) => !v)} className={`mt-1.5 w-full text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 py-2 rounded-lg ${FOCUS_RING}`}>
               Start full focus
             </button>
             {showPresets && (
@@ -229,13 +194,6 @@ function NowCard({ item, nowMs, settings, onStart, onComplete, onToggleSubtask, 
   );
 }
 
-// Helper so a row/card can show "in X" from the item's own timestamp.
-function nowMsFor(item) {
-  const [y, m, d] = item.date.split('-').map(Number);
-  const [hh, mm] = item.time.split(':').map(Number);
-  return new Date(y, m - 1, d, hh, mm).getTime();
-}
-
 function ItemRow({ item, nowMs, onOpenEdit, onComplete, onStart, onMoveToday, onSnooze, reduced }) {
   const past = isPast(item, nowMs);
   const actionable = isActionable(item);
@@ -253,11 +211,7 @@ function ItemRow({ item, nowMs, onOpenEdit, onComplete, onStart, onMoveToday, on
           <span className="text-xs font-medium text-gray-500 dark:text-gray-400 tnums shrink-0 pr-1">{inLabel(nowMsFor(item), nowMs)}</span>
         )}
         {actionable && !past && (
-          <button
-            onClick={() => onStart(item)}
-            aria-label={`Focus on ${item.title}`}
-            className={`shrink-0 p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg ${FOCUS_RING}`}
-          >
+          <button onClick={() => onStart(item)} aria-label={`Focus on ${item.title}`} className={`shrink-0 p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg ${FOCUS_RING}`}>
             <Play size={16} />
           </button>
         )}
@@ -290,10 +244,7 @@ function LaterDisclosure({ items, ...rest }) {
   if (items.length === 0) return null;
   return (
     <section className="mt-6">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-1.5 ${sectionLabel} mb-0 hover:text-gray-900 dark:hover:text-gray-100 rounded ${FOCUS_RING}`}
-      >
+      <button onClick={() => setOpen((v) => !v)} className={`flex items-center gap-1.5 ${sectionLabel} mb-0 hover:text-gray-900 dark:hover:text-gray-100 rounded ${FOCUS_RING}`}>
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         Later · {items.length}
       </button>
@@ -308,7 +259,7 @@ function LaterDisclosure({ items, ...rest }) {
   );
 }
 
-export default function Home({ zones, progress, banner, settings, handlers, nowMs }) {
+export default function Home({ zones, settings, handlers, nowMs }) {
   const reduced = settings.motion === 'reduced';
   const rowHandlers = {
     nowMs,
@@ -320,26 +271,23 @@ export default function Home({ zones, progress, banner, settings, handlers, nowM
     reduced,
   };
   return (
-    <div className="min-h-[100dvh] bg-gray-50 dark:bg-gray-950">
-      <Header progress={progress} banner={banner} onOpenSettings={handlers.onOpenSettings} reduced={reduced} />
-      <main className="max-w-[600px] mx-auto px-4 pb-20 pt-3">
-        <QuickCapture onCapture={handlers.onCapture} />
-        <Inbox items={zones.inbox} onOpenEdit={handlers.onOpenEdit} onComplete={handlers.onComplete} reduced={reduced} />
-        <NowCard
-          item={zones.now}
-          nowMs={nowMs}
-          settings={settings}
-          onStart={handlers.onStart}
-          onComplete={handlers.onComplete}
-          onToggleSubtask={handlers.onToggleSubtask}
-          onOpenEdit={handlers.onOpenEdit}
-          onMoveToday={handlers.onMoveToday}
-          onSnooze={handlers.onSnooze}
-          reduced={reduced}
-        />
-        <NextList items={zones.next} {...rowHandlers} />
-        <LaterDisclosure items={zones.later} {...rowHandlers} />
-      </main>
-    </div>
+    <>
+      <QuickCapture onCapture={handlers.onCapture} />
+      <Inbox items={zones.inbox} onOpenEdit={handlers.onOpenEdit} onComplete={handlers.onComplete} reduced={reduced} />
+      <NowCard
+        item={zones.now}
+        nowMs={nowMs}
+        settings={settings}
+        onStart={handlers.onStart}
+        onComplete={handlers.onComplete}
+        onToggleSubtask={handlers.onToggleSubtask}
+        onOpenEdit={handlers.onOpenEdit}
+        onMoveToday={handlers.onMoveToday}
+        onSnooze={handlers.onSnooze}
+        reduced={reduced}
+      />
+      <NextList items={zones.next} {...rowHandlers} />
+      <LaterDisclosure items={zones.later} {...rowHandlers} />
+    </>
   );
 }

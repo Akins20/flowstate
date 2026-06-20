@@ -1,8 +1,10 @@
 // Bottom sheets: EditSheet (all categorization lives here) and SettingsSheet.
-import { useState } from 'react';
-import { Trash2, Plus, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trash2, Plus, X, Bell, Copy, Link2, Send } from 'lucide-react';
 import { TYPE_META, TYPE_ORDER, PRE_ALARM_OPTIONS, FOCUS_PRESETS, uid } from './lib';
 import { BottomSheet, FOCUS_RING } from './ui';
+import { api } from './api';
+import { pushSupported, isPushEnabled, enablePush, disablePush } from './push';
 
 const fieldCls = `w-full text-base text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2.5 ${FOCUS_RING}`;
 const labelCls = 'text-sm font-medium text-gray-700 dark:text-gray-300';
@@ -183,7 +185,121 @@ function ChipRow({ options, value, onChange }) {
   );
 }
 
-export function SettingsSheet({ open, settings, onClose, onChange }) {
+function PushSync({ onLinked }) {
+  const supported = pushSupported();
+  const [enabled, setEnabled] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState('');
+  const [revealed, setRevealed] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    isPushEnabled().then(setEnabled);
+  }, []);
+
+  const togglePush = async () => {
+    setBusy(true);
+    setMsg('');
+    try {
+      if (enabled) {
+        await disablePush();
+        setEnabled(false);
+      } else {
+        await enablePush();
+        setEnabled(true);
+        setMsg('Reminders on — they’ll reach you even when FlowState is closed.');
+      }
+    } catch (e) {
+      setMsg(e.message || 'Could not turn on reminders.');
+    }
+    setBusy(false);
+  };
+
+  const sendTest = async () => {
+    setBusy(true);
+    setMsg('');
+    try {
+      await api.testPush();
+      setMsg('Test sent — check your notifications.');
+    } catch {
+      setMsg('Test failed — turn reminders on first.');
+    }
+    setBusy(false);
+  };
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(api.token);
+      setMsg('Sync code copied.');
+    } catch {
+      setRevealed(true);
+    }
+  };
+
+  const link = () => {
+    if (api.setToken(code.trim())) {
+      setCode('');
+      setMsg('Linked. This device now shares that space.');
+      onLinked && onLinked();
+    } else {
+      setMsg('That sync code looks too short.');
+    }
+  };
+
+  const masked = api.token.slice(0, 6) + '••••••••' + api.token.slice(-4);
+
+  return (
+    <div className="py-3 space-y-3">
+      <div className="flex items-center justify-between gap-4">
+        <span>
+          <span className="flex items-center gap-1.5 text-base text-gray-800 dark:text-gray-100"><Bell size={16} /> Reminders when closed</span>
+          <span className="block text-xs text-gray-500 dark:text-gray-400">Push notifications so reminders reach you even when the app is shut.</span>
+        </span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          disabled={!supported || busy}
+          onClick={togglePush}
+          className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${FOCUS_RING} ${enabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-700'} ${!supported || busy ? 'opacity-50' : ''}`}
+        >
+          <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : ''}`} />
+        </button>
+      </div>
+
+      {!supported && <p className="text-xs text-amber-700 dark:text-amber-300">This browser doesn’t support push. Reminders will still fire while the app is open.</p>}
+
+      {enabled && (
+        <button onClick={sendTest} disabled={busy} className={`inline-flex items-center gap-1.5 text-sm font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 px-3 py-2 rounded-lg ${FOCUS_RING}`}>
+          <Send size={15} /> Send a test
+        </button>
+      )}
+
+      <div className="pt-1">
+        <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">Sync code</span>
+        <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">Use this on another device to share the same items. Keep it private.</span>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 min-w-0 truncate text-sm bg-gray-100 dark:bg-gray-800 rounded-lg px-2.5 py-2 text-gray-700 dark:text-gray-200">{revealed ? api.token : masked}</code>
+          <button onClick={() => setRevealed((v) => !v)} className={`text-xs font-medium text-gray-600 dark:text-gray-300 px-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 ${FOCUS_RING}`}>{revealed ? 'Hide' : 'Show'}</button>
+          <button onClick={copyCode} aria-label="Copy sync code" className={`p-2 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/10 ${FOCUS_RING}`}><Copy size={16} /></button>
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="Paste a sync code to link this device"
+            className={`flex-1 min-w-0 text-sm bg-gray-100 dark:bg-gray-800 rounded-lg px-2.5 py-2 text-gray-900 dark:text-gray-100 ${FOCUS_RING}`}
+          />
+          <button onClick={link} className={`inline-flex items-center gap-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-lg ${FOCUS_RING}`}><Link2 size={15} /> Link</button>
+        </div>
+      </div>
+
+      {msg && <p className="text-xs text-gray-600 dark:text-gray-400">{msg}</p>}
+    </div>
+  );
+}
+
+export function SettingsSheet({ open, settings, onClose, onChange, onLinked }) {
   const set = (patch) => onChange({ ...settings, ...patch });
   return (
     <BottomSheet open={open} title="Settings" onClose={onClose}>
@@ -200,6 +316,7 @@ export function SettingsSheet({ open, settings, onClose, onChange }) {
             ]}
           />
         </div>
+        <PushSync onLinked={onLinked} />
         <Toggle label="Sound" hint="Gentle chimes & alarms" checked={settings.sound} onChange={(v) => set({ sound: v })} />
         <Toggle label="Vibration" hint="Buzz on mobile (while tab is open)" checked={settings.vibration} onChange={(v) => set({ vibration: v })} />
         <Toggle

@@ -47,6 +47,7 @@ export function freshState() {
 }
 
 export function newItem(partial = {}) {
+  const now = Date.now();
   return {
     id: uid(),
     title: '',
@@ -57,7 +58,9 @@ export function newItem(partial = {}) {
     preAlarmMin: null, // lead-time pre-alarm in minutes
     completed: false,
     completedAt: null,
-    createdAt: Date.now(),
+    deleted: false, // tombstone for multi-device sync (kept, filtered from UI)
+    createdAt: now,
+    updatedAt: now, // last-write-wins clock for sync
     ...partial,
   };
 }
@@ -75,7 +78,9 @@ function migrateOldItem(old) {
     preAlarmMin: null,
     completed: !!old.completed,
     completedAt: old.completed ? Date.now() : null,
+    deleted: false,
     createdAt,
+    updatedAt: createdAt,
   };
 }
 
@@ -92,7 +97,9 @@ function normalizeItem(it) {
     preAlarmMin: it.preAlarmMin ?? null,
     completed: !!it.completed,
     completedAt: it.completedAt ?? null,
+    deleted: !!it.deleted,
     createdAt: it.createdAt ?? Date.now(),
+    updatedAt: it.updatedAt ?? it.createdAt ?? Date.now(),
   };
 }
 
@@ -120,11 +127,19 @@ export function rolloverProgress(state) {
   return state;
 }
 
+// Drop tombstones older than 30 days so deleted items don't accumulate forever.
+const TOMBSTONE_TTL = 30 * 24 * 60 * 60 * 1000;
+export function purgeTombstones(state) {
+  const cutoff = Date.now() - TOMBSTONE_TTL;
+  const items = state.items.filter((i) => !(i.deleted && (i.updatedAt || 0) < cutoff));
+  return items.length === state.items.length ? state : { ...state, items };
+}
+
 export function loadState() {
   try {
     const str = localStorage.getItem(STORAGE_KEY);
     if (!str) return freshState();
-    return rolloverProgress(migrate(JSON.parse(str)));
+    return purgeTombstones(rolloverProgress(migrate(JSON.parse(str))));
   } catch (e) {
     // A corrupt key must never white-screen the app.
     console.warn('FlowState: could not read saved data, starting fresh.', e);
@@ -205,7 +220,7 @@ export function mmss(ms) {
 
 // ---- Zones: each item lives in exactly one place ----
 export function computeZones(items, nowMs) {
-  const active = items.filter((i) => !i.completed);
+  const active = items.filter((i) => !i.completed && !i.deleted);
   const inbox = active.filter((i) => !isScheduled(i)).sort((a, b) => b.createdAt - a.createdAt);
   const scheduled = active.filter(isScheduled).sort((a, b) => itemMs(a) - itemMs(b));
 

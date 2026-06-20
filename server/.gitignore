@@ -1,0 +1,11 @@
+# Build output
+/flowstate-server
+/flowstate-server-*
+*.exe
+
+# Runtime data (bbolt db holds the VAPID private key — never commit)
+/data/
+*.db
+
+# Local secrets
+.env
