@@ -21,10 +21,10 @@ import (
 const minTokenLen = 20
 
 type Config struct {
-	Addr          string // listen address, e.g. 127.0.0.1:8091 (nginx terminates TLS)
-	DataDir       string
-	AllowedOrigin string // CORS origin; "*" works because auth is a bearer header, not cookies
-	VAPIDSubject  string // mailto:… or an https URL
+	Addr           string   // listen address, e.g. 127.0.0.1:8091 (nginx terminates TLS)
+	DataDir        string   // bbolt location
+	AllowedOrigins []string // CORS allowlist (comma-separated in env); "*" allows any
+	VAPIDSubject   string   // mailto:… or an https URL
 }
 
 func env(key, def string) string {
@@ -32,6 +32,31 @@ func env(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func splitAndTrim(s string) []string {
+	parts := strings.Split(s, ",")
+	out := parts[:0]
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// allowedOrigin returns the value to echo in Access-Control-Allow-Origin, or "" if the
+// request's Origin isn't allowed.
+func (c Config) allowedOrigin(origin string) string {
+	for _, o := range c.AllowedOrigins {
+		if o == "*" {
+			return "*"
+		}
+		if o == origin && origin != "" {
+			return origin
+		}
+	}
+	return ""
 }
 
 type Server struct {
@@ -54,10 +79,10 @@ func main() {
 	log.SetPrefix("flowstate: ")
 
 	cfg := Config{
-		Addr:          env("ADDR", "127.0.0.1:8091"),
-		DataDir:       env("DATA_DIR", "./data"),
-		AllowedOrigin: env("ALLOWED_ORIGIN", "*"),
-		VAPIDSubject:  env("VAPID_SUBJECT", "mailto:admin@example.com"),
+		Addr:           env("ADDR", "127.0.0.1:8091"),
+		DataDir:        env("DATA_DIR", "./data"),
+		AllowedOrigins: splitAndTrim(env("ALLOWED_ORIGIN", "*")),
+		VAPIDSubject:   env("VAPID_SUBJECT", "mailto:admin@example.com"),
 	}
 	if err := os.MkdirAll(cfg.DataDir, 0o750); err != nil {
 		log.Fatalf("create data dir: %v", err)
@@ -87,7 +112,7 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("listening on %s (origin %s)", cfg.Addr, cfg.AllowedOrigin)
+		log.Printf("listening on %s (origins %s)", cfg.Addr, strings.Join(cfg.AllowedOrigins, ", "))
 		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("http: %v", err)
 		}
@@ -117,11 +142,13 @@ func (s *Server) routes() http.Handler {
 
 func (s *Server) cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", s.cfg.AllowedOrigin)
-		w.Header().Set("Vary", "Origin")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
-		w.Header().Set("Access-Control-Max-Age", "86400")
+		w.Header().Add("Vary", "Origin")
+		if allow := s.cfg.allowedOrigin(r.Header.Get("Origin")); allow != "" {
+			w.Header().Set("Access-Control-Allow-Origin", allow)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
