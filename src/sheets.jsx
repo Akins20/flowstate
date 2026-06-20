@@ -29,6 +29,7 @@ function EditForm({ item, onClose, onSave, onDelete }) {
   const updateSub = (id, patch) => set({ subtasks: draft.subtasks.map((s) => (s.id === id ? { ...s, ...patch } : s)) });
   const removeSub = (id) => set({ subtasks: draft.subtasks.filter((s) => s.id !== id) });
 
+  const isNote = draft.type === 'note';
   const save = () => onSave({ ...draft, title: draft.title.trim() || item.title });
 
   return (
@@ -61,31 +62,37 @@ function EditForm({ item, onClose, onSave, onDelete }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className={isNote ? '' : 'grid grid-cols-2 gap-3'}>
           <div>
             <label className={labelCls}>Date</label>
             <input type="date" value={draft.date || ''} onChange={(e) => set({ date: e.target.value || null })} className={`${fieldCls} mt-1`} />
           </div>
-          <div>
-            <label className={labelCls}>Time</label>
-            <input type="time" value={draft.time || ''} onChange={(e) => set({ time: e.target.value || null })} className={`${fieldCls} mt-1`} />
-          </div>
+          {!isNote && (
+            <div>
+              <label className={labelCls}>Time</label>
+              <input type="time" value={draft.time || ''} onChange={(e) => set({ time: e.target.value || null })} className={`${fieldCls} mt-1`} />
+            </div>
+          )}
         </div>
 
-        <div>
-          <label className={labelCls}>Early heads-up</label>
-          <select
-            value={draft.preAlarmMin ?? ''}
-            onChange={(e) => set({ preAlarmMin: e.target.value === '' ? null : Number(e.target.value) })}
-            className={`${fieldCls} mt-1`}
-          >
-            {PRE_ALARM_OPTIONS.map((o) => (
-              <option key={String(o.value)} value={o.value ?? ''}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {isNote ? (
+          <p className="text-xs text-gray-500 dark:text-gray-400">Notes don’t ring — they just sit on your calendar for reference.</p>
+        ) : (
+          <div>
+            <label className={labelCls}>Early heads-up</label>
+            <select
+              value={draft.preAlarmMin ?? ''}
+              onChange={(e) => set({ preAlarmMin: e.target.value === '' ? null : Number(e.target.value) })}
+              className={`${fieldCls} mt-1`}
+            >
+              {PRE_ALARM_OPTIONS.map((o) => (
+                <option key={String(o.value)} value={o.value ?? ''}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <label className={labelCls}>Steps</label>
@@ -185,11 +192,12 @@ function ChipRow({ options, value, onChange }) {
   );
 }
 
-function PushSync({ onLinked }) {
+function PushSync({ onLinked, localCount = 0 }) {
   const supported = pushSupported();
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState('');
+  const [pendingLink, setPendingLink] = useState('');
   const [revealed, setRevealed] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -236,14 +244,27 @@ function PushSync({ onLinked }) {
     }
   };
 
-  const link = () => {
-    if (api.setToken(code.trim())) {
-      setCode('');
-      setMsg('Linked. This device now shares that space.');
-      onLinked && onLinked();
-    } else {
+  const requestLink = () => {
+    const t = code.trim();
+    if (t.length < 20) {
       setMsg('That sync code looks too short.');
+      return;
     }
+    setMsg('');
+    setPendingLink(t);
+  };
+  const confirmLink = () => {
+    if (api.setToken(pendingLink)) {
+      setPendingLink('');
+      setCode('');
+      setMsg('Linked — your items here are combined with that space (nothing is replaced).');
+      onLinked && onLinked();
+    }
+  };
+  const startFresh = () => {
+    api.newToken();
+    setMsg('Started a new private space on this device.');
+    onLinked && onLinked();
   };
 
   const masked = api.token.slice(0, 6) + '••••••••' + api.token.slice(-4);
@@ -290,8 +311,20 @@ function PushSync({ onLinked }) {
             placeholder="Paste a sync code to link this device"
             className={`flex-1 min-w-0 text-sm bg-gray-100 dark:bg-gray-800 rounded-lg px-2.5 py-2 text-gray-900 dark:text-gray-100 ${FOCUS_RING}`}
           />
-          <button onClick={link} className={`inline-flex items-center gap-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-lg ${FOCUS_RING}`}><Link2 size={15} /> Link</button>
+          <button onClick={requestLink} className={`inline-flex items-center gap-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-lg ${FOCUS_RING}`}><Link2 size={15} /> Link</button>
         </div>
+        {pendingLink && (
+          <div className="mt-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-sm text-amber-800 dark:text-amber-200">
+            Combine your {localCount} item{localCount === 1 ? '' : 's'} here with that space? Nothing is replaced.
+            <div className="flex gap-2 mt-2">
+              <button onClick={confirmLink} className={`text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg ${FOCUS_RING}`}>Combine &amp; link</button>
+              <button onClick={() => setPendingLink('')} className={`text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg ${FOCUS_RING}`}>Cancel</button>
+            </div>
+          </div>
+        )}
+        <button onClick={startFresh} className={`mt-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded ${FOCUS_RING}`}>
+          Use a new private space
+        </button>
       </div>
 
       {msg && <p className="text-xs text-gray-600 dark:text-gray-400">{msg}</p>}
@@ -299,7 +332,7 @@ function PushSync({ onLinked }) {
   );
 }
 
-export function SettingsSheet({ open, settings, onClose, onChange, onLinked }) {
+export function SettingsSheet({ open, settings, onClose, onChange, onLinked, localCount }) {
   const set = (patch) => onChange({ ...settings, ...patch });
   return (
     <BottomSheet open={open} title="Settings" onClose={onClose}>
@@ -316,7 +349,7 @@ export function SettingsSheet({ open, settings, onClose, onChange, onLinked }) {
             ]}
           />
         </div>
-        <PushSync onLinked={onLinked} />
+        <PushSync onLinked={onLinked} localCount={localCount} />
         <Toggle label="Sound" hint="Gentle chimes & alarms" checked={settings.sound} onChange={(v) => set({ sound: v })} />
         <Toggle label="Vibration" hint="Buzz on mobile (while tab is open)" checked={settings.vibration} onChange={(v) => set({ vibration: v })} />
         <Toggle

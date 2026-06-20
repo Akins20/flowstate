@@ -1,8 +1,8 @@
 // TimeTree-style calendar: month grid + agenda, sharing the app's item model.
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, List } from 'lucide-react';
-import { todayStr, formatTime, formatDateShort, isScheduled, nowLabel } from './lib';
-import { TypeIcon, FOCUS_RING } from './ui';
+import { todayStr, formatTime, formatDateShort, nowLabel } from './lib';
+import { TypeIcon, CompleteButton, FOCUS_RING } from './ui';
 
 const DOT = {
   call: 'bg-sky-500',
@@ -26,7 +26,7 @@ function groupByDate(items) {
   return map;
 }
 
-function MonthGrid({ items, onOpenEdit, onAddOnDate }) {
+function MonthGrid({ items, onOpenEdit, onAddOnDate, onComplete }) {
   const today = todayStr();
   const [cursor, setCursor] = useState(() => {
     const [y, m] = today.split('-').map(Number);
@@ -121,7 +121,7 @@ function MonthGrid({ items, onOpenEdit, onAddOnDate }) {
         ) : (
           <div className="space-y-1.5">
             {selectedItems.map((it) => (
-              <EventRow key={it.id} item={it} onOpenEdit={onOpenEdit} />
+              <EventRow key={it.id} item={it} onOpenEdit={onOpenEdit} onComplete={onComplete} />
             ))}
           </div>
         )}
@@ -130,23 +130,26 @@ function MonthGrid({ items, onOpenEdit, onAddOnDate }) {
   );
 }
 
-function EventRow({ item, onOpenEdit }) {
+function EventRow({ item, onOpenEdit, onComplete }) {
   return (
-    <button
-      onClick={() => onOpenEdit(item)}
-      className={`w-full flex items-center gap-3 bg-white dark:bg-gray-900 rounded-xl px-3 py-2.5 text-left ${FOCUS_RING}`}
-    >
-      <TypeIcon type={item.type} size={16} />
-      <span className="flex-1 min-w-0 truncate text-gray-800 dark:text-gray-100">{nowLabel(item)}</span>
-      {item.time && <span className="text-xs font-medium text-gray-500 dark:text-gray-400 tnums shrink-0">{formatTime(item.time)}</span>}
-    </button>
+    <div className="flex items-center gap-2.5 bg-white dark:bg-gray-900 rounded-xl px-2 py-1.5">
+      {onComplete && item.type !== 'note' && (
+        <CompleteButton checked={false} onClick={() => onComplete(item)} label={`Done: ${item.title}`} />
+      )}
+      <button onClick={() => onOpenEdit(item)} className={`flex-1 min-w-0 flex items-center gap-2.5 text-left rounded-lg ${FOCUS_RING}`}>
+        <TypeIcon type={item.type} size={16} />
+        <span className="flex-1 min-w-0 truncate text-gray-800 dark:text-gray-100">{nowLabel(item)}</span>
+      </button>
+      {item.time && <span className="text-xs font-medium text-gray-500 dark:text-gray-400 tnums shrink-0 pr-1">{formatTime(item.time)}</span>}
+    </div>
   );
 }
 
-function Agenda({ items, onOpenEdit }) {
+function Agenda({ items, onOpenEdit, onComplete }) {
   const today = todayStr();
   const grouped = useMemo(() => {
-    const scheduled = items.filter((i) => isScheduled(i) && !i.deleted && !i.completed && i.date >= today);
+    // date-only items belong here too (they show on the month grid); not just date+time.
+    const scheduled = items.filter((i) => i.date && !i.deleted && !i.completed && i.date >= today);
     const map = groupByDate(scheduled);
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [items, today]);
@@ -161,7 +164,7 @@ function Agenda({ items, onOpenEdit }) {
           <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">{formatDateShort(date)}</h3>
           <div className="space-y-1.5">
             {list.map((it) => (
-              <EventRow key={it.id} item={it} onOpenEdit={onOpenEdit} />
+              <EventRow key={it.id} item={it} onOpenEdit={onOpenEdit} onComplete={onComplete} />
             ))}
           </div>
         </div>
@@ -170,7 +173,7 @@ function Agenda({ items, onOpenEdit }) {
   );
 }
 
-export default function Calendar({ items, onOpenEdit, onAddOnDate }) {
+export default function Calendar({ items, onOpenEdit, onAddOnDate, onComplete }) {
   const [mode, setMode] = useState('month'); // 'month' | 'agenda'
   return (
     <div>
@@ -191,9 +194,9 @@ export default function Calendar({ items, onOpenEdit, onAddOnDate }) {
         ))}
       </div>
       {mode === 'month' ? (
-        <MonthGrid items={items} onOpenEdit={onOpenEdit} onAddOnDate={onAddOnDate} />
+        <MonthGrid items={items} onOpenEdit={onOpenEdit} onAddOnDate={onAddOnDate} onComplete={onComplete} />
       ) : (
-        <Agenda items={items} onOpenEdit={onOpenEdit} />
+        <Agenda items={items} onOpenEdit={onOpenEdit} onComplete={onComplete} />
       )}
     </div>
   );

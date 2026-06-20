@@ -53,6 +53,18 @@ class FlowStateApi {
     return true;
   }
 
+  // Start a fresh private space (new identity). Current local items will re-sync into it.
+  newToken() {
+    const t = generateToken();
+    try {
+      localStorage.setItem(TOKEN_KEY, t);
+    } catch {
+      /* ignore */
+    }
+    this._token = t;
+    return t;
+  }
+
   // The one place an HTTP request is actually made.
   async request(path, { method = 'GET', body, auth = true } = {}) {
     const headers = {};

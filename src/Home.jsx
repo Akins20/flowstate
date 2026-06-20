@@ -259,8 +259,7 @@ function LaterDisclosure({ items, ...rest }) {
   );
 }
 
-export default function Home({ zones, settings, handlers, nowMs }) {
-  const reduced = settings.motion === 'reduced';
+export default function Home({ zones, settings, reduced, handlers, nowMs }) {
   const rowHandlers = {
     nowMs,
     onOpenEdit: handlers.onOpenEdit,

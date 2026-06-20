@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"time"
@@ -94,28 +95,80 @@ func leaf(tx *bolt.Tx, userKey string, name []byte, create bool) (*bolt.Bucket, 
 }
 
 func (s *Store) PutEvent(userKey string, e *Event) error {
-	e.UpdatedAt = time.Now().UnixMilli()
+	// Preserve the client's last-write-wins clock; only stamp if missing. Overwriting it
+	// here would corrupt cross-device merge ordering.
+	if e.UpdatedAt == 0 {
+		e.UpdatedAt = time.Now().UnixMilli()
+	}
 	return s.db.Update(func(tx *bolt.Tx) error {
-		b, err := leaf(tx, userKey, subEvents, true)
+		eb, err := leaf(tx, userKey, subEvents, true)
 		if err != nil {
 			return err
+		}
+		var old Event
+		hadOld := false
+		if raw := eb.Get([]byte(e.ID)); raw != nil {
+			hadOld = json.Unmarshal(raw, &old) == nil
 		}
 		raw, err := json.Marshal(e)
 		if err != nil {
 			return err
 		}
-		return b.Put([]byte(e.ID), raw)
+		if err := eb.Put([]byte(e.ID), raw); err != nil {
+			return err
+		}
+		// When the timing/relevance changes (e.g. reschedule, snooze, un-complete),
+		// drop stale fired-guard keys so the reminder can fire again.
+		if hadOld && changedTiming(&old, e) {
+			if fb, ferr := leaf(tx, userKey, subFired, false); ferr == nil && fb != nil {
+				clearFiredFor(fb, e.ID)
+			}
+		}
+		return nil
 	})
 }
 
 func (s *Store) DeleteEvent(userKey, id string) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
-		b, err := leaf(tx, userKey, subEvents, false)
-		if err != nil || b == nil {
-			return err
+		if eb, err := leaf(tx, userKey, subEvents, false); err == nil && eb != nil {
+			_ = eb.Delete([]byte(id))
 		}
-		return b.Delete([]byte(id))
+		if fb, err := leaf(tx, userKey, subFired, false); err == nil && fb != nil {
+			clearFiredFor(fb, id)
+		}
+		return nil
 	})
+}
+
+func eqI64(a, b *int64) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+func eqInt(a, b *int) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+func changedTiming(a, b *Event) bool {
+	return !eqI64(a.DueAt, b.DueAt) || !eqInt(a.PreAlarmMin, b.PreAlarmMin) || a.Completed != b.Completed || a.Deleted != b.Deleted
+}
+
+// clearFiredFor deletes every "<id>:..." fired-guard key (ids contain no ':').
+func clearFiredFor(b *bolt.Bucket, id string) {
+	prefix := []byte(id + ":")
+	c := b.Cursor()
+	var keys [][]byte
+	for k, _ := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, _ = c.Next() {
+		cp := make([]byte, len(k))
+		copy(cp, k)
+		keys = append(keys, cp)
+	}
+	for _, k := range keys {
+		_ = b.Delete(k)
+	}
 }
 
 func (s *Store) ListEvents(userKey string) ([]*Event, error) {

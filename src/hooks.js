@@ -1,6 +1,6 @@
 // Shared hooks: one app-wide clock, the reward primitive, and the corrected alarm engine.
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { itemMs } from './lib';
+import { itemMs, loadFired, saveFired } from './lib';
 import { playChime, playSoftBeep, playAlarm, vibrate, fireConfetti, unlockAudio } from './audio';
 
 // A single shared "now" tick for the banner, countdown chips, and past-time detection.
@@ -14,9 +14,9 @@ export function useNow(intervalMs = 15000) {
 }
 
 // Central reward primitive — reads settings before making any sound/motion.
-export function useReward(settings) {
+// `reduced` is the effective reduced-motion (in-app setting OR OS preference).
+export function useReward(settings, reduced) {
   return useMemo(() => {
-    const reduced = settings.motion === 'reduced';
     return {
       // any subtask / small check
       tick() {
@@ -34,7 +34,7 @@ export function useReward(settings) {
         if (settings.sound) playChime(settings.salience);
       },
     };
-  }, [settings.sound, settings.vibration, settings.motion, settings.salience]);
+  }, [settings.sound, settings.vibration, settings.salience, reduced]);
 }
 
 function notify(item, kind) {
@@ -58,7 +58,9 @@ function notify(item, kind) {
 //  - per-item per-trigger "last fired" guard so nothing fires twice
 //  - 90s window so a stale item from hours ago never alarms on page load
 export function useAlarmEngine(items, settings) {
-  const firedRef = useRef(new Set());
+  // Persisted { key -> firedAt } so a reload within the window doesn't re-fire.
+  const firedRef = useRef(null);
+  if (firedRef.current === null) firedRef.current = loadFired();
   // Keep the latest items/settings without re-subscribing the interval each render.
   const ref = useRef({ items, settings });
   ref.current = { items, settings };
@@ -66,9 +68,10 @@ export function useAlarmEngine(items, settings) {
   useEffect(() => {
     function fireIfDue(item, kind, triggerMs, schedMs, now) {
       const key = `${item.id}:${kind}:${schedMs}`;
-      if (firedRef.current.has(key)) return;
+      if (firedRef.current[key]) return;
       if (now >= triggerMs && now < triggerMs + 90000) {
-        firedRef.current.add(key);
+        firedRef.current[key] = now;
+        saveFired(firedRef.current);
         const s = ref.current.settings;
         if (s.sound) (kind === 'on' ? playAlarm : playSoftBeep)(s.salience);
         if (s.vibration) vibrate(kind === 'on' ? [120, 60, 120] : [80]);
@@ -79,7 +82,8 @@ export function useAlarmEngine(items, settings) {
     function check() {
       const now = Date.now();
       for (const item of ref.current.items) {
-        if (item.completed) continue;
+        // Notes are reference, not reminders; tombstones/done don't alarm.
+        if (item.completed || item.deleted || item.type === 'note') continue;
         const sched = itemMs(item);
         if (sched == null) continue;
         fireIfDue(item, 'on', sched, sched, now);

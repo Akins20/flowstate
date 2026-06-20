@@ -25,7 +25,7 @@ function Segmented({ view, onView }) {
   );
 }
 
-export default function Shell({ view, onView, progress, banner, onOpenSettings, reduced, children }) {
+export default function Shell({ view, onView, progress, banner, onOpenSettings, reduced, syncState, children }) {
   const pop = usePopOnIncrease(progress.doneToday, reduced);
   return (
     <div className="min-h-[100dvh] bg-gray-50 dark:bg-gray-950">
@@ -37,6 +37,11 @@ export default function Shell({ view, onView, progress, banner, onOpenSettings, 
               FlowState
             </h1>
             <div className="flex items-center gap-1.5">
+              {syncState === 'offline' && (
+                <span className="text-xs font-medium text-amber-700 dark:text-amber-300" role="status" title="Saved on this device; will sync when you’re back online">
+                  Offline
+                </span>
+              )}
               <span
                 className={`text-sm font-medium text-emerald-700 dark:text-emerald-300 ${pop ? 'fs-pop' : ''}`}
                 title={progress.bestDay ? `Best day: ${progress.bestDay}` : undefined}

@@ -135,6 +135,52 @@ export function purgeTombstones(state) {
   return items.length === state.items.length ? state : { ...state, items };
 }
 
+// ---- focus-session persistence (survives reload / tab close) ----
+const SESSION_KEY = 'tm-session';
+export function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (!s || typeof s !== 'object' || typeof s.endAt !== 'number') return null;
+    // Don't resurrect (and re-alarm) a session that ended hours ago.
+    if (!s.paused && Date.now() - s.endAt > 2 * 60 * 60 * 1000) return null;
+    return s;
+  } catch {
+    return null;
+  }
+}
+export function saveSession(s) {
+  try {
+    if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    else localStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+// ---- reminder fired-guard persistence (so a reload doesn't re-fire) ----
+const FIRED_KEY = 'tm-fired';
+const FIRED_WINDOW = 120000;
+export function loadFired() {
+  try {
+    const obj = JSON.parse(localStorage.getItem(FIRED_KEY) || '{}');
+    const cutoff = Date.now() - FIRED_WINDOW;
+    const out = {};
+    for (const k in obj) if (obj[k] >= cutoff) out[k] = obj[k];
+    return out;
+  } catch {
+    return {};
+  }
+}
+export function saveFired(map) {
+  try {
+    localStorage.setItem(FIRED_KEY, JSON.stringify(map));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function loadState() {
   try {
     const str = localStorage.getItem(STORAGE_KEY);
@@ -205,7 +251,8 @@ export function formatDateShort(date) {
   const [y, m, d] = date.split('-').map(Number);
   const dt = new Date(y, m - 1, d);
   const today = todayStr();
-  const tomorrow = todayStr(new Date(Date.now() + 86400000));
+  const t = new Date();
+  const tomorrow = todayStr(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)); // DST-safe
   if (date === today) return 'Today';
   if (date === tomorrow) return 'Tomorrow';
   return dt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });

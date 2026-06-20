@@ -63,6 +63,36 @@ export async function enablePush() {
   return true;
 }
 
+// Re-POST the current subscription to the server (idempotent), and recreate it if the
+// browser rotated/dropped it. Safe to call on every app start. Does nothing if the user
+// never enabled push or permission isn't granted.
+export async function refreshSubscription() {
+  if (!pushSupported() || Notification.permission !== 'granted') return;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) return;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const vapidKey = await api.vapidPublicKey();
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      });
+    }
+    await api.subscribe(sub.toJSON());
+  } catch {
+    /* best-effort */
+  }
+}
+
+// Wire SW "subscription rotated" messages to a refresh.
+export function listenForSubscriptionChange() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'pushsubscriptionchange') refreshSubscription();
+  });
+}
+
 export async function disablePush() {
   try {
     const reg = await navigator.serviceWorker.getRegistration();

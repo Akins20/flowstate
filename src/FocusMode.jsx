@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Pause, Play, Plus, Square, Check, Coffee, ArrowRight } from 'lucide-react';
 import { mmss, firstUnchecked, snapshotHeadline } from './lib';
 import { playSoftBeep, playAlarm, vibrate } from './audio';
-import { FOCUS_RING } from './ui';
+import { FOCUS_RING, useFocusTrap } from './ui';
 
 const WRAP_MS = 120000; // 2-minute wrap-up window
 
@@ -46,9 +46,9 @@ function TimerArc({ remainingMs, totalMs, reduced, label, sub }) {
   );
 }
 
-export function FocusMode({ session, item, settings, onPause, onResume, onAddTime, onEnd, onElapsed, onToggleSubtask }) {
-  const reduced = settings.motion === 'reduced';
+export function FocusMode({ session, item, settings, reduced, onPause, onResume, onAddTime, onEnd, onElapsed, onToggleSubtask }) {
   const [now, setNow] = useState(() => Date.now());
+  const [announce, setAnnounce] = useState('');
   const wrapBeeped = useRef(false);
   const elapsedFired = useRef(false);
 
@@ -61,9 +61,22 @@ export function FocusMode({ session, item, settings, onPause, onResume, onAddTim
     return () => clearInterval(id);
   }, [session.paused, session.endAt]);
 
+  // Background tabs throttle setInterval, so recompute the instant we return — this also
+  // makes the end-alarm fire on wake if the timer ran out while the tab was hidden.
+  useEffect(() => {
+    const wake = () => setNow(Date.now());
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('focus', wake);
+    return () => {
+      document.removeEventListener('visibilitychange', wake);
+      window.removeEventListener('focus', wake);
+    };
+  }, []);
+
   useEffect(() => {
     if (inWrap && !wrapBeeped.current) {
       wrapBeeped.current = true;
+      setAnnounce('Two minutes left');
       if (settings.sound) playSoftBeep(settings.salience);
       if (settings.vibration) vibrate(60);
     }
@@ -73,16 +86,25 @@ export function FocusMode({ session, item, settings, onPause, onResume, onAddTim
   useEffect(() => {
     if (!session.paused && remaining <= 0 && !elapsedFired.current) {
       elapsedFired.current = true;
+      setAnnounce('Time’s up');
       if (settings.sound) playAlarm(settings.salience);
       if (settings.vibration) vibrate([120, 80, 120, 80, 200]);
+      try {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification('Time’s up', { body: item ? `Focused on ${item.title}` : 'Focus session complete', tag: 'fs-focus-end' });
+        }
+      } catch {
+        /* ignore */
+      }
       onElapsed();
     }
-  }, [remaining, session.paused, settings, onElapsed]);
+  }, [remaining, session.paused, settings, onElapsed, item]);
 
   const sub = item ? firstUnchecked(item) : null;
 
   return (
     <div className="min-h-[100dvh] bg-white dark:bg-gray-950 flex flex-col">
+      <p className="sr-only" role="status" aria-live="assertive">{announce}</p>
       <div className="max-w-[600px] w-full mx-auto px-5 py-5 flex-1 flex flex-col">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-gray-400 dark:text-gray-500 inline-flex items-center gap-1.5">
@@ -154,10 +176,13 @@ export function FocusMode({ session, item, settings, onPause, onResume, onAddTim
 
 export function SnapshotModal({ session, item, nextItem, onKeepGoing, onBreak, onDone }) {
   const minutes = Math.max(1, Math.round(session.totalMs / 60000));
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef, true);
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-gray-900/40 fs-fade" aria-hidden />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         className="relative z-10 w-full sm:max-w-md bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-2xl shadow-xl p-6 fs-sheet"
