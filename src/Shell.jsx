@@ -34,7 +34,7 @@ export default function Shell({ view, onView, progress, banner, onOpenSettings, 
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-lg font-bold text-gray-900 dark:text-gray-50 flex items-center gap-2">
               <Clock size={20} className="text-indigo-600 dark:text-indigo-400" />
-              FlowState
+              Skafld
             </h1>
             <div className="flex items-center gap-1.5">
               {syncState === 'offline' && (

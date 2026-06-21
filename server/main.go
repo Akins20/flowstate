@@ -254,7 +254,7 @@ func (s *Server) handleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleTestPush(w http.ResponseWriter, r *http.Request) {
-	s.pusher.SendTo(userKeyOf(r), map[string]any{"title": "FlowState", "body": "Push is working 🎉", "url": "/"})
+	s.pusher.SendTo(userKeyOf(r), map[string]any{"title": "Skafld", "body": "Push is working 🎉", "url": "/"})
 	writeJSON(w, http.StatusOK, map[string]string{"status": "sent"})
 }
 

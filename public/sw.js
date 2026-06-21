@@ -1,4 +1,4 @@
-/* FlowState service worker — shows push reminders and focuses the app on click. */
+/* Skafld service worker — shows push reminders and focuses the app on click. */
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
@@ -9,15 +9,15 @@ self.addEventListener('push', (event) => {
       try {
         data = event.data ? event.data.json() : {};
       } catch (e) {
-        data = { title: 'FlowState', body: event.data ? event.data.text() : '' };
+        data = { title: 'Skafld', body: event.data ? event.data.text() : '' };
       }
 
-      // If a FlowState window is open/focused, its in-tab alarm already handles this —
+      // If a Skafld window is open/focused, its in-tab alarm already handles this —
       // don't also pop a system notification (avoids the double-alert).
       const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       if (wins.some((c) => c.focused || c.visibilityState === 'visible')) return;
 
-      const title = data.title || 'FlowState';
+      const title = data.title || 'Skafld';
       await self.registration.showNotification(title, {
         body: data.body || '',
         tag: data.tag || undefined,

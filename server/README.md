@@ -1,4 +1,4 @@
-# FlowState push server
+# Skafld push server
 
 A tiny Go service that stores each user's events and delivers **Web Push** reminders at the
 scheduled time — even when the app is closed. Single binary, no external database.

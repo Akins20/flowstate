@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "FlowState",
-  "short_name": "FlowState",
+  "name": "Skafld",
+  "short_name": "Skafld",
   "description": "ADHD-friendly time, focus, and reminders. One thing now, gentle alarms, and a calm calendar.",
   "start_url": "/",
   "scope": "/",

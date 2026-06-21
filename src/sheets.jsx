@@ -133,7 +133,7 @@ function EditForm({ item, onClose, onSave, onDelete }) {
           </div>
         </div>
 
-        <p className="text-xs text-gray-500 dark:text-gray-400">Reminders fire while this tab is open — keep FlowState open during focus.</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">Reminders fire while this tab is open — keep Skafld open during focus.</p>
 
         <div className="flex items-center gap-2 pt-1">
           <button onClick={save} className={`flex-1 text-base font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-3 rounded-xl ${FOCUS_RING}`}>
@@ -215,7 +215,7 @@ function PushSync({ onLinked, localCount = 0 }) {
       } else {
         await enablePush();
         setEnabled(true);
-        setMsg('Reminders on — they’ll reach you even when FlowState is closed.');
+        setMsg('Reminders on — they’ll reach you even when Skafld is closed.');
       }
     } catch (e) {
       setMsg(e.message || 'Could not turn on reminders.');

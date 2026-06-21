@@ -1,6 +1,6 @@
-# Publishing FlowState to the Google Play Store (TWA)
+# Publishing Skafld to the Google Play Store (TWA)
 
-FlowState is a PWA, so it ships to Play as a **Trusted Web Activity (TWA)** — a thin native
+Skafld is a PWA, so it ships to Play as a **Trusted Web Activity (TWA)** — a thin native
 Android shell that opens the live site full-screen (no URL bar), with its own icon and push
 notifications. This is Google's official, supported path.
 
@@ -31,7 +31,7 @@ The repo is already prepared:
 > then `bubblewrap build`. Requires JDK + Android SDK.
 
 ## 2. Create the app in Play Console & upload
-1. Play Console → **Create app** → name "FlowState", app, free.
+1. Play Console → **Create app** → name "Skafld", app, free.
 2. **Test and release → Production** (or Internal testing first) → **Create new release** → upload the `.aab`.
 3. Accept **Play App Signing** (recommended). Google now holds the real signing key.
 
@@ -57,7 +57,7 @@ The TWA only goes full-screen if the site vouches for the app via `assetlinks.js
 - **Screenshots** (phone, min 2) — capture the running app (Today, Focus, Calendar). These are
   uploaded directly in Play Console; they don't live in the repo.
 - Short description (≤80 chars), full description, the 512² icon, and a 1024×500 feature graphic.
-- Content rating questionnaire, Data safety form (FlowState stores tasks on your own server;
+- Content rating questionnaire, Data safety form (Skafld stores tasks on your own server;
   push subscriptions; no ads/trackers), privacy policy URL, target audience.
 
 ## 5. Submit → review
@@ -69,7 +69,7 @@ The TWA only goes full-screen if the site vouches for the app via `assetlinks.js
 ## Notes & gotchas
 - **Push works in a TWA** — Android routes web push to the system; your existing service worker
   + VAPID flow is used as-is. The user grants notifications inside the app.
-- **The "thin wrapper" rule:** Google rejects pure website shells. FlowState qualifies because it's
+- **The "thin wrapper" rule:** Google rejects pure website shells. Skafld qualifies because it's
   an installable PWA with offline support, push reminders, and app-like UX.
 - **HTTPS is required** end-to-end. The app (Vercel) and API (`…sslip.io:8444`) are both HTTPS. If
   you later move the API to your DuckDNS domain, update `src/api.js` (one line) and rebuild.
