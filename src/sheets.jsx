@@ -1,7 +1,7 @@
 // Bottom sheets: EditSheet (all categorization lives here) and SettingsSheet.
 import { useState, useEffect } from 'react';
 import { Trash2, Plus, X, Bell, Copy, Link2, Send } from 'lucide-react';
-import { TYPE_META, TYPE_ORDER, PRE_ALARM_OPTIONS, FOCUS_PRESETS, uid } from './lib';
+import { TYPE_META, TYPE_ORDER, PRE_ALARM_OPTIONS, REPEAT_OPTIONS, FOCUS_PRESETS, uid } from './lib';
 import { BottomSheet, FOCUS_RING } from './ui';
 import { api } from './api';
 import { pushSupported, isPushEnabled, enablePush, disablePush } from './push';
@@ -95,6 +95,21 @@ function EditForm({ item, onClose, onSave, onDelete }) {
         )}
 
         <div>
+          <label className={labelCls}>Repeat</label>
+          <select
+            value={draft.repeat ?? ''}
+            onChange={(e) => set({ repeat: e.target.value || null })}
+            className={`${fieldCls} mt-1`}
+          >
+            {REPEAT_OPTIONS.map((o) => (
+              <option key={String(o.value)} value={o.value ?? ''}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
           <label className={labelCls}>Steps</label>
           <div className="space-y-2 mt-1.5">
             {draft.subtasks.map((s) => (
@@ -164,9 +179,9 @@ function Toggle({ label, hint, checked, onChange }) {
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${FOCUS_RING} ${checked ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-700'}`}
+        className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${FOCUS_RING} ${checked ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-700'}`}
       >
-        <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${checked ? 'translate-x-5' : ''}`} />
+        <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${checked ? 'translate-x-5' : ''}`} />
       </button>
     </label>
   );
@@ -282,9 +297,9 @@ function PushSync({ onLinked, localCount = 0 }) {
           aria-checked={enabled}
           disabled={!supported || busy}
           onClick={togglePush}
-          className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${FOCUS_RING} ${enabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-700'} ${!supported || busy ? 'opacity-50' : ''}`}
+          className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${FOCUS_RING} ${enabled ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-700'} ${!supported || busy ? 'opacity-50' : ''}`}
         >
-          <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : ''}`} />
+          <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${enabled ? 'translate-x-5' : ''}`} />
         </button>
       </div>
 

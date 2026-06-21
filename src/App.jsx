@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   loadState, saveState, newItem, computeZones, todayStr, itemMs, inLabel, affirmation,
-  loadSession, saveSession, prefersReducedMotion,
+  loadSession, saveSession, prefersReducedMotion, nextOccurrence, uid,
 } from './lib';
 import { useNow, useReward, useAlarmEngine, unlockAudio } from './hooks';
 import { fetchRemote, mergeItems, pushItem as syncPushItem } from './sync';
@@ -9,6 +9,8 @@ import { registerServiceWorker, refreshSubscription, listenForSubscriptionChange
 import Shell from './Shell';
 import Home from './Home';
 import Calendar from './Calendar';
+import DoneView from './DoneView';
+import CaptureSheet from './CaptureSheet';
 import { FocusMode, SnapshotModal } from './FocusMode';
 import { EditSheet, SettingsSheet } from './sheets';
 import { Toast } from './ui';
@@ -67,6 +69,8 @@ export default function App() {
     const apply = () => {
       const dark = settings.theme === 'dark' || (settings.theme === 'system' && mq && mq.matches);
       root.classList.toggle('dark', !!dark);
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', dark ? '#0b0f1a' : '#f9fafb');
     };
     apply();
     if (settings.theme === 'system' && mq) {
@@ -161,14 +165,31 @@ export default function App() {
     setStore((s) => ({ ...s, items: [newItem({ title }), ...s.items] }));
   }, []);
 
+  // On completing a repeating item, spawn ONLY the next occurrence (keeps the list bounded).
+  const spawnRepeat = useCallback((item) => {
+    const nd = nextOccurrence(item);
+    if (!nd) return;
+    const next = newItem({
+      title: item.title,
+      type: item.type,
+      date: nd,
+      time: item.time,
+      preAlarmMin: item.preAlarmMin,
+      repeat: item.repeat,
+      subtasks: (item.subtasks || []).map((s) => ({ id: uid(), text: s.text, done: false })),
+    });
+    setStore((s) => ({ ...s, items: [next, ...s.items] }));
+  }, []);
+
   const onComplete = useCallback(
     (item) => {
       if (item.completed) return;
       patchItem(item.id, { completed: true, completedAt: Date.now() });
+      spawnRepeat(item);
       reward.complete();
       showToast(affirmation(doneToday + 1));
     },
-    [patchItem, reward, showToast, doneToday]
+    [patchItem, spawnRepeat, reward, showToast, doneToday]
   );
 
   const onToggleSubtask = useCallback(
@@ -181,6 +202,7 @@ export default function App() {
 
       if (becomingDone && allDone) {
         patchItem(item.id, { subtasks, completed: true, completedAt: Date.now() });
+        spawnRepeat(item);
         reward.complete();
         showToast(affirmation(doneToday + 1));
       } else if (becomingDone) {
@@ -194,7 +216,7 @@ export default function App() {
         setSession((s) => (s ? { ...s, checked: s.checked + 1 } : s));
       }
     },
-    [patchItem, reward, showToast, doneToday, session]
+    [patchItem, spawnRepeat, reward, showToast, doneToday, session]
   );
 
   const onMoveToday = useCallback((item) => patchItem(item.id, { date: todayStr() }), [patchItem]);
@@ -210,6 +232,7 @@ export default function App() {
   // ---- overlays ----
   const onOpenEdit = useCallback((item) => setOverlay({ kind: 'edit', editItemId: item.id }), []);
   const onOpenSettings = useCallback(() => setOverlay({ kind: 'settings', editItemId: null }), []);
+  const onAdd = useCallback(() => setOverlay({ kind: 'capture', editItemId: null }), []);
   const closeOverlay = useCallback(() => {
     setDraft(null); // discard an unsaved calendar-add draft (no ghost rows)
     setOverlay({ kind: 'none', editItemId: null });
@@ -380,11 +403,13 @@ export default function App() {
           onToggleSubtask={onToggleSubtask}
         />
       ) : (
-        <Shell view={view} onView={setView} progress={progressForShell} banner={banner} onOpenSettings={onOpenSettings} reduced={reducedMotion} syncState={syncState}>
+        <Shell view={view} onView={setView} onAdd={onAdd} progress={progressForShell} banner={banner} onOpenSettings={onOpenSettings} reduced={reducedMotion} syncState={syncState}>
           {view === 'today' ? (
             <Home zones={zones} settings={settings} reduced={reducedMotion} nowMs={nowMs} handlers={homeHandlers} />
-          ) : (
+          ) : view === 'calendar' ? (
             <Calendar items={items} onOpenEdit={onOpenEdit} onAddOnDate={onAddOnDate} onComplete={onComplete} />
+          ) : (
+            <DoneView doneToday={doneToday} bestDay={progress.bestDay} />
           )}
         </Shell>
       )}
@@ -393,6 +418,7 @@ export default function App() {
         <SnapshotModal session={session} item={focusItem} nextItem={nextAfterFocus} onKeepGoing={onKeepGoing} onBreak={onBreak} onDone={onDoneFocus} />
       )}
 
+      <CaptureSheet open={overlay.kind === 'capture'} onClose={closeOverlay} onCapture={onCapture} reduced={reducedMotion} />
       <EditSheet open={overlay.kind === 'edit'} item={editItem} onClose={closeOverlay} onSave={onSaveEdit} onDelete={onDelete} />
       <SettingsSheet open={overlay.kind === 'settings'} settings={settings} onClose={closeOverlay} onChange={onChangeSettings} onLinked={onLinked} localCount={localCount} />
 

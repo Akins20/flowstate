@@ -59,11 +59,34 @@ export function newItem(partial = {}) {
     completed: false,
     completedAt: null,
     deleted: false, // tombstone for multi-device sync (kept, filtered from UI)
+    repeat: null, // null | 'daily' | 'weekdays' | 'weekly'
     createdAt: now,
     updatedAt: now, // last-write-wins clock for sync
     ...partial,
   };
 }
+
+// The next date for a repeating item (returns YYYY-MM-DD or null). DST-safe calendar math.
+export function nextOccurrence(item) {
+  if (!item.repeat || !item.date) return null;
+  const [y, m, d] = item.date.split('-').map(Number);
+  const base = new Date(y, m - 1, d);
+  if (item.repeat === 'daily') base.setDate(base.getDate() + 1);
+  else if (item.repeat === 'weekly') base.setDate(base.getDate() + 7);
+  else if (item.repeat === 'weekdays') {
+    do {
+      base.setDate(base.getDate() + 1);
+    } while (base.getDay() === 0 || base.getDay() === 6);
+  } else return null;
+  return todayStr(base);
+}
+
+export const REPEAT_OPTIONS = [
+  { value: null, label: 'Never' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekdays', label: 'Weekdays' },
+  { value: 'weekly', label: 'Weekly' },
+];
 
 function migrateOldItem(old) {
   const type = old.type === 'note' ? 'note' : 'task'; // old 'task' kept as task (now shown with CheckSquare, not Bell)
@@ -79,6 +102,7 @@ function migrateOldItem(old) {
     completed: !!old.completed,
     completedAt: old.completed ? Date.now() : null,
     deleted: false,
+    repeat: old.repeat ?? null,
     createdAt,
     updatedAt: createdAt,
   };
@@ -98,6 +122,7 @@ function normalizeItem(it) {
     completed: !!it.completed,
     completedAt: it.completedAt ?? null,
     deleted: !!it.deleted,
+    repeat: it.repeat ?? null,
     createdAt: it.createdAt ?? Date.now(),
     updatedAt: it.updatedAt ?? it.createdAt ?? Date.now(),
   };

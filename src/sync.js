@@ -20,6 +20,7 @@ export function toServerEvent(item) {
     completed: !!item.completed,
     completedAt: item.completedAt ?? null,
     deleted: !!item.deleted,
+    repeat: item.repeat ?? null,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
@@ -38,6 +39,7 @@ export function fromServerEvent(e) {
     completed: !!e.completed,
     completedAt: e.completedAt ?? null,
     deleted: !!e.deleted,
+    repeat: e.repeat ?? null,
     createdAt: e.createdAt ?? Date.now(),
     updatedAt: e.updatedAt ?? Date.now(),
   };
