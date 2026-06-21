@@ -163,3 +163,10 @@ npm i -D @resvg/resvg-js && node scripts/gen-icons.mjs
 - **Speech-to-text** works in Chrome, Edge, and Safari (the browser). It does **not** work inside an
   installed iOS home-screen PWA (Apple limitation), so the mic is hidden there and typing remains the
   always-on fallback.
+
+## License
+
+Skafld is open source under the **Apache License 2.0** - see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Copyright 2026 Akins20. You may use, modify, and redistribute it (including commercially) under the
+terms of that license, which also includes an explicit patent grant. All third-party dependencies are
+permissive (MIT / ISC / BSD-3-Clause) and compatible.
