@@ -1,4 +1,4 @@
-/* Skafld service worker — shows push reminders and focuses the app on click. */
+/* Skafld service worker - shows push reminders and focuses the app on click. */
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
@@ -12,7 +12,7 @@ self.addEventListener('push', (event) => {
         data = { title: 'Skafld', body: event.data ? event.data.text() : '' };
       }
 
-      // If a Skafld window is open/focused, its in-tab alarm already handles this —
+      // If a Skafld window is open/focused, its in-tab alarm already handles this -
       // don't also pop a system notification (avoids the double-alert).
       const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       if (wins.some((c) => c.focused || c.visibilityState === 'visible')) return;

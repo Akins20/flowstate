@@ -61,7 +61,7 @@ export function FocusMode({ session, item, settings, reduced, onPause, onResume,
     return () => clearInterval(id);
   }, [session.paused, session.endAt]);
 
-  // Background tabs throttle setInterval, so recompute the instant we return — this also
+  // Background tabs throttle setInterval, so recompute the instant we return - this also
   // makes the end-alarm fire on wake if the timer ran out while the tab was hidden.
   useEffect(() => {
     const wake = () => setNow(Date.now());
@@ -125,7 +125,7 @@ export function FocusMode({ session, item, settings, reduced, onPause, onResume,
             totalMs={session.totalMs}
             reduced={reduced}
             label={mmss(Math.max(0, remaining))}
-            sub={inWrap ? 'Wrapping up — good spot to pause?' : null}
+            sub={inWrap ? 'Wrapping up - good spot to pause?' : null}
           />
 
           <div className="text-center max-w-sm">
@@ -188,7 +188,7 @@ export function SnapshotModal({ session, item, nextItem, onKeepGoing, onBreak, o
         className="relative z-10 w-full sm:max-w-md bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-2xl shadow-xl p-6 fs-sheet"
       >
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-50">
-          {snapshotHeadline(item ? item.title : null)} — {minutes} min in.
+          {snapshotHeadline(item ? item.title : null)} - {minutes} min in.
         </h2>
         <div className="mt-4 space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
           <p>⏱️ Focused for {minutes} minutes.</p>
@@ -198,7 +198,7 @@ export function SnapshotModal({ session, item, nextItem, onKeepGoing, onBreak, o
               Next up: <span className="font-medium text-gray-800 dark:text-gray-100">{nextItem.title}</span>
             </p>
           ) : (
-            <p className="text-gray-600 dark:text-gray-400">Nothing else on the clock — nice and clear.</p>
+            <p className="text-gray-600 dark:text-gray-400">Nothing else on the clock - nice and clear.</p>
           )}
         </div>
         <div className="mt-6 grid gap-2">

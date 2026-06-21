@@ -1,8 +1,11 @@
 // TimeTree-style calendar: month grid + agenda, sharing the app's item model.
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Plus, CalendarDays, List } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, Clock, List } from 'lucide-react';
 import { todayStr, formatTime, formatDateShort, nowLabel } from './lib';
 import { TypeIcon, CompleteButton, FOCUS_RING } from './ui';
+import { useNow } from './hooks';
+
+const pad2 = (n) => String(n).padStart(2, '0');
 
 const DOT = {
   call: 'bg-sky-500',
@@ -173,13 +176,88 @@ function Agenda({ items, onOpenEdit, onComplete }) {
   );
 }
 
+function NowLine() {
+  return (
+    <div className="flex items-center gap-3 py-0.5" aria-hidden>
+      <div className="w-14 shrink-0 text-right text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">Now</div>
+      <div className="flex-1 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400" />
+        <span className="flex-1 h-px bg-indigo-600/40 dark:bg-indigo-400/40" />
+      </div>
+    </div>
+  );
+}
+
+function TimelineRow({ item, onOpenEdit, onComplete, past }) {
+  return (
+    <div className={`flex items-stretch gap-3 ${past ? 'opacity-60' : ''}`}>
+      <div className="w-14 shrink-0 text-right pt-2.5 text-xs font-medium text-gray-500 dark:text-gray-400 tnums">
+        {item.time ? formatTime(item.time) : ''}
+      </div>
+      <div className="flex-1 min-w-0 flex items-center gap-2.5 bg-white dark:bg-gray-900 rounded-xl px-2 py-1.5">
+        {item.type !== 'note' && <CompleteButton checked={false} onClick={() => onComplete(item)} label={`Done: ${item.title}`} />}
+        <button onClick={() => onOpenEdit(item)} className={`flex-1 min-w-0 flex items-center gap-2.5 text-left rounded-lg ${FOCUS_RING}`}>
+          <TypeIcon type={item.type} size={16} />
+          <span className="truncate text-gray-800 dark:text-gray-100">{nowLabel(item)}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Calm single-column timeline for TODAY only: untimed up top, timed in order, one "now" line.
+function DayView({ items, onOpenEdit, onComplete }) {
+  const now = useNow(15000);
+  const today = todayStr();
+  const nd = new Date(now);
+  const nowHM = `${pad2(nd.getHours())}:${pad2(nd.getMinutes())}`;
+
+  const { untimed, timed, nowIdx } = useMemo(() => {
+    const todays = items.filter((i) => i.date === today && !i.deleted && !i.completed);
+    const untimed = todays.filter((i) => !i.time);
+    const timed = todays.filter((i) => i.time).sort((a, b) => a.time.localeCompare(b.time));
+    let idx = timed.findIndex((i) => i.time >= nowHM);
+    if (idx === -1) idx = timed.length;
+    return { untimed, timed, nowIdx: idx };
+  }, [items, today, nowHM]);
+
+  if (untimed.length === 0 && timed.length === 0) {
+    return <p className="text-sm text-gray-500 dark:text-gray-400 py-12 text-center">Nothing scheduled today. Capture something, or give an item a time.</p>;
+  }
+
+  const rows = [];
+  timed.forEach((it, idx) => {
+    if (idx === nowIdx) rows.push(<NowLine key="now" />);
+    rows.push(<TimelineRow key={it.id} item={it} onOpenEdit={onOpenEdit} onComplete={onComplete} past={it.time < nowHM} />);
+  });
+  if (nowIdx >= timed.length) rows.push(<NowLine key="now" />);
+
+  return (
+    <div>
+      <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3">{formatDateShort(today)}</h2>
+      {untimed.length > 0 && (
+        <div className="mb-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1.5 pl-[4.25rem]">Anytime</p>
+          <div className="space-y-1.5">
+            {untimed.map((it) => (
+              <TimelineRow key={it.id} item={it} onOpenEdit={onOpenEdit} onComplete={onComplete} past={false} />
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="space-y-1.5">{rows}</div>
+    </div>
+  );
+}
+
 export default function Calendar({ items, onOpenEdit, onAddOnDate, onComplete }) {
-  const [mode, setMode] = useState('month'); // 'month' | 'agenda'
+  const [mode, setMode] = useState('month'); // 'month' | 'day' | 'agenda'
   return (
     <div>
       <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 mb-4">
         {[
           { k: 'month', label: 'Month', Icon: CalendarDays },
+          { k: 'day', label: 'Day', Icon: Clock },
           { k: 'agenda', label: 'Agenda', Icon: List },
         ].map(({ k, label, Icon }) => (
           <button
@@ -195,6 +273,8 @@ export default function Calendar({ items, onOpenEdit, onAddOnDate, onComplete })
       </div>
       {mode === 'month' ? (
         <MonthGrid items={items} onOpenEdit={onOpenEdit} onAddOnDate={onAddOnDate} onComplete={onComplete} />
+      ) : mode === 'day' ? (
+        <DayView items={items} onOpenEdit={onOpenEdit} onComplete={onComplete} />
       ) : (
         <Agenda items={items} onOpenEdit={onOpenEdit} onComplete={onComplete} />
       )}

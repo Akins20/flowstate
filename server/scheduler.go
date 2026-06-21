@@ -8,7 +8,7 @@ import (
 )
 
 // fireWindowMs: once a trigger time passes we still fire if we're within this window,
-// so a reminder is never silently skipped — but an event due hours ago (e.g. after the
+// so a reminder is never silently skipped - but an event due hours ago (e.g. after the
 // server was down) won't spam late. Matches the client's engine.
 const fireWindowMs int64 = 120_000
 
@@ -72,7 +72,7 @@ func maybeFire(store *Store, pusher *Pusher, userKey string, e *Event, kind stri
 	title := "Now: " + e.Title
 	body := "It's time."
 	if kind == "pre" {
-		title = "Heads up — " + e.Title
+		title = "Heads up - " + e.Title
 		body = fmt.Sprintf("Coming up in %d min. Want to wrap up first?", *e.PreAlarmMin)
 	}
 	log.Printf("scheduler: firing %s reminder for %q", kind, e.Title)

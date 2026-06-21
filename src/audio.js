@@ -97,6 +97,6 @@ export function fireConfetti() {
       disableForReducedMotion: true,
     });
   } catch {
-    /* canvas-confetti unavailable — silently skip */
+    /* canvas-confetti unavailable - silently skip */
   }
 }

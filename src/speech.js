@@ -20,10 +20,10 @@ function detectSupported() {
 }
 
 const ERRORS = {
-  'not-allowed': 'Allow the microphone to dictate — you can still type.',
-  'service-not-allowed': 'Allow the microphone to dictate — you can still type.',
-  network: 'Voice needs a connection — type it instead.',
-  'no-speech': 'Didn’t catch that — try again.',
+  'not-allowed': 'Allow the microphone to dictate - you can still type.',
+  'service-not-allowed': 'Allow the microphone to dictate - you can still type.',
+  network: 'Voice needs a connection - type it instead.',
+  'no-speech': 'Didn’t catch that - try again.',
 };
 
 // onText receives the running transcript (interim + final) so it can stream into an input.
@@ -60,7 +60,7 @@ export function useSpeechCapture(onText) {
       }
       onTextRef.current && onTextRef.current((finalText + interim).trim());
     };
-    rec.onerror = (e) => setError(ERRORS[e.error] || 'Voice hiccupped — type it instead.');
+    rec.onerror = (e) => setError(ERRORS[e.error] || 'Voice hiccupped - type it instead.');
     rec.onend = () => {
       setListening(false);
       recRef.current = null;

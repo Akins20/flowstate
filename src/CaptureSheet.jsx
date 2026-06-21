@@ -31,9 +31,9 @@ export default function CaptureSheet({ open, onClose, onCapture, reduced }) {
           autoFocus
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Brain dump — type it, hit enter, sort it later"
+          placeholder="Brain dump - type it, hit enter, sort it later"
           aria-label="Capture"
-          className={`w-full text-[17px] bg-gray-100 dark:bg-gray-800 rounded-xl px-3.5 py-3 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 ${FOCUS_RING}`}
+          className={`w-full text-[17px] bg-white dark:bg-gray-900 rounded-xl px-3.5 py-3.5 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 ${FOCUS_RING}`}
         />
         <div className="flex items-center gap-2">
           {speech.supported && (
@@ -60,7 +60,7 @@ export default function CaptureSheet({ open, onClose, onCapture, reduced }) {
         </div>
         {speech.error && <p className="text-xs text-amber-700 dark:text-amber-300">{speech.error}</p>}
         {!speech.supported && (
-          <p className="text-xs text-gray-500 dark:text-gray-400">Voice capture works in Safari, not the installed app on iPhone — typing still works great.</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Voice capture works in Safari, not the installed app on iPhone - typing still works great.</p>
         )}
       </form>
     </BottomSheet>

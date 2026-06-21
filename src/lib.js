@@ -9,7 +9,7 @@ export function uid() {
   return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
 }
 
-// Local YYYY-MM-DD (NOT UTC — the old code used toISOString which drifts by a day).
+// Local YYYY-MM-DD (NOT UTC - the old code used toISOString which drifts by a day).
 export function todayStr(d = new Date()) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -248,7 +248,7 @@ export function isPast(item, nowMs) {
   return ms != null && ms < nowMs;
 }
 
-// "in 25 min" / "in 2h 10m" / "in 3 days" — future only.
+// "in 25 min" / "in 2h 10m" / "in 3 days" - future only.
 export function inLabel(targetMs, nowMs) {
   const diff = targetMs - nowMs;
   if (diff <= 30000) return 'now';
@@ -305,7 +305,7 @@ export function computeZones(items, nowMs) {
     // Upcoming hero; past "still here" items sit gently at the top of NEXT.
     pool = [...past, ...upcoming.slice(1)];
   } else {
-    // Nothing upcoming — promote the earliest "still here" item so there's always one clear thing.
+    // Nothing upcoming - promote the earliest "still here" item so there's always one clear thing.
     now = past[0] || null;
     pool = now ? past.slice(1) : [];
   }
@@ -347,10 +347,10 @@ export function nowLabel(item) {
 
 // ---- Copy pools (cheap novelty, no persisted state) ----
 const AFFIRMATIONS = [
-  "Done. That's {n} today — nice.",
-  'Nice — that’s one less thing.',
+  "Done. That's {n} today - nice.",
+  'Nice - that’s one less thing.',
   'Boom. {n} done today.',
-  'That counts — {n} today.',
+  'That counts - {n} today.',
   'Good one. {n} today.',
 ];
 export function affirmation(n) {

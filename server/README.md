@@ -1,7 +1,7 @@
 # Skafld push server
 
 A tiny Go service that stores each user's events and delivers **Web Push** reminders at the
-scheduled time — even when the app is closed. Single binary, no external database.
+scheduled time - even when the app is closed. Single binary, no external database.
 
 Live: `https://69-164-244-64.sslip.io:8444` (stopgap sslip.io host until DuckDNS is back).
 
@@ -21,7 +21,7 @@ Live: `https://69-164-244-64.sslip.io:8444` (stopgap sslip.io host until DuckDNS
 
 ## Data durability across updates
 
-User data lives entirely in `/opt/flowstate/data/` — **separate from the binary**. Updating the
+User data lives entirely in `/opt/flowstate/data/` - **separate from the binary**. Updating the
 server only replaces the binary and restarts the service. Use `./deploy.sh`, which never touches the
 data directory. Any future change to the on-disk shape must be an **additive migration**, never a wipe.
 

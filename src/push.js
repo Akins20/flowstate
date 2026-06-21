@@ -44,7 +44,7 @@ export async function isPushEnabled() {
   }
 }
 
-// Must be called from a user gesture (button click) — it asks for notification permission.
+// Must be called from a user gesture (button click) - it asks for notification permission.
 export async function enablePush() {
   if (!pushSupported()) throw new Error('Push notifications are not supported on this browser.');
   const reg = (await registerServiceWorker()) || (await navigator.serviceWorker.ready);

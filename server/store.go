@@ -23,8 +23,8 @@ type Event struct {
 	Subtasks    []Subtask `json:"subtasks"`
 	Completed   bool      `json:"completed"`
 	CompletedAt *int64    `json:"completedAt"`
-	Deleted     bool      `json:"deleted"` // tombstone — synced so deletes propagate, never reminded
-	Repeat      *string   `json:"repeat"`  // null|daily|weekdays|weekly — round-tripped for sync
+	Deleted     bool      `json:"deleted"` // tombstone - synced so deletes propagate, never reminded
+	Repeat      *string   `json:"repeat"`  // null|daily|weekdays|weekly - round-tripped for sync
 	CreatedAt   int64     `json:"createdAt"`
 	UpdatedAt   int64     `json:"updatedAt"`
 }

@@ -32,7 +32,7 @@ function QuickCapture({ onCapture }) {
       <input
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Brain dump — type it, hit enter, sort it later"
+        placeholder="Brain dump - type it, hit enter, sort it later"
         aria-label="Quick capture"
         className={`flex-1 min-w-0 text-base bg-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-1 py-2.5 rounded-lg ${FOCUS_RING}`}
       />
@@ -51,7 +51,7 @@ function QuickCapture({ onCapture }) {
 function StillHere({ item, onMoveToday, onSnooze }) {
   return (
     <div className="mt-2">
-      <p className="text-sm text-amber-700 dark:text-amber-300">Still here whenever you’re ready — was set for {formatTime(item.time)}.</p>
+      <p className="text-sm text-amber-700 dark:text-amber-300">Still here whenever you’re ready - was set for {formatTime(item.time)}.</p>
       <div className="flex flex-wrap gap-2 mt-2">
         <button
           onClick={() => onMoveToday(item)}
@@ -118,7 +118,7 @@ function NowCard({ item, nowMs, settings, onStart, onComplete, onToggleSubtask, 
         <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400 mb-2">Now</p>
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm px-5 py-8 text-center">
           <p className="text-gray-800 dark:text-gray-100 font-medium">Clear deck.</p>
-          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Capture one thing — you can sort it out later.</p>
+          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Capture one thing - you can sort it out later.</p>
         </div>
       </section>
     );

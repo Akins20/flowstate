@@ -1,4 +1,5 @@
 // Bottom sheets: EditSheet (all categorization lives here) and SettingsSheet.
+// iOS grouped-inset style: white cards on the sheet's grouped-gray background.
 import { useState, useEffect } from 'react';
 import { Trash2, Plus, X, Bell, Copy, Link2, Send } from 'lucide-react';
 import { TYPE_META, TYPE_ORDER, PRE_ALARM_OPTIONS, REPEAT_OPTIONS, FOCUS_PRESETS, uid } from './lib';
@@ -6,8 +7,12 @@ import { BottomSheet, FOCUS_RING } from './ui';
 import { api } from './api';
 import { pushSupported, isPushEnabled, enablePush, disablePush } from './push';
 
-const fieldCls = `w-full text-base text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2.5 ${FOCUS_RING}`;
-const labelCls = 'text-sm font-medium text-gray-700 dark:text-gray-300';
+const groupCls = 'rounded-2xl bg-white dark:bg-gray-900 overflow-hidden';
+const rowCls = 'flex items-center justify-between gap-3 px-4 py-3 min-h-[44px]';
+const rowLabelCls = 'text-[15px] text-gray-700 dark:text-gray-300 shrink-0';
+const trailCls = `bg-transparent text-[15px] text-gray-600 dark:text-gray-300 text-right outline-none ${FOCUS_RING} rounded`;
+const sectionCls = 'text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2';
+const noteCls = 'text-xs text-gray-500 dark:text-gray-400 px-1';
 
 export function EditSheet({ open, item, onClose, onSave, onDelete }) {
   if (!open || !item) return null;
@@ -19,7 +24,6 @@ function EditForm({ item, onClose, onSave, onDelete }) {
   const [newSub, setNewSub] = useState('');
 
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
-
   const addSub = () => {
     const t = newSub.trim();
     if (!t) return;
@@ -34,123 +38,126 @@ function EditForm({ item, onClose, onSave, onDelete }) {
 
   return (
     <BottomSheet open title="Edit" onClose={onClose}>
-      <div className="space-y-4">
-        <div>
-          <label className={labelCls}>Title</label>
-          <input value={draft.title} onChange={(e) => set({ title: e.target.value })} className={`${fieldCls} mt-1`} placeholder="What is it?" />
-        </div>
-
-        <div>
-          <label className={labelCls}>Type</label>
-          <div className="flex flex-wrap gap-2 mt-1.5">
-            {TYPE_ORDER.map((t) => {
-              const meta = TYPE_META[t];
-              const Icon = meta.Icon;
-              const active = draft.type === t;
-              return (
-                <button
-                  key={t}
-                  onClick={() => set({ type: active ? null : t })}
-                  className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg ${FOCUS_RING} ${
-                    active ? `${meta.tintBg} ${meta.tintText}` : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <Icon size={16} /> {meta.label}
-                </button>
-              );
-            })}
+      <div className="space-y-5">
+        {/* Title */}
+        <div className={groupCls}>
+          <div className="px-4 py-3">
+            <input
+              value={draft.title}
+              onChange={(e) => set({ title: e.target.value })}
+              placeholder="Title"
+              className={`w-full bg-transparent text-[17px] text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none ${FOCUS_RING} rounded`}
+            />
           </div>
         </div>
 
-        <div className={isNote ? '' : 'grid grid-cols-2 gap-3'}>
-          <div>
-            <label className={labelCls}>Date</label>
-            <input type="date" value={draft.date || ''} onChange={(e) => set({ date: e.target.value || null })} className={`${fieldCls} mt-1`} />
+        {/* Type */}
+        <div className={groupCls}>
+          <div className="px-4 py-3">
+            <p className={sectionCls}>Type</p>
+            <div className="flex flex-wrap gap-2">
+              {TYPE_ORDER.map((t) => {
+                const meta = TYPE_META[t];
+                const Icon = meta.Icon;
+                const active = draft.type === t;
+                return (
+                  <button
+                    key={t}
+                    onClick={() => set({ type: active ? null : t })}
+                    className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg ${FOCUS_RING} ${
+                      active ? `${meta.tintBg} ${meta.tintText}` : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <Icon size={16} /> {meta.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Scheduling */}
+        <div className={`${groupCls} divide-y divide-gray-100 dark:divide-gray-800`}>
+          <div className={rowCls}>
+            <span className={rowLabelCls}>Date</span>
+            <input type="date" value={draft.date || ''} onChange={(e) => set({ date: e.target.value || null })} className={trailCls} />
           </div>
           {!isNote && (
-            <div>
-              <label className={labelCls}>Time</label>
-              <input type="time" value={draft.time || ''} onChange={(e) => set({ time: e.target.value || null })} className={`${fieldCls} mt-1`} />
+            <div className={rowCls}>
+              <span className={rowLabelCls}>Time</span>
+              <input type="time" value={draft.time || ''} onChange={(e) => set({ time: e.target.value || null })} className={trailCls} />
             </div>
           )}
-        </div>
-
-        {isNote ? (
-          <p className="text-xs text-gray-500 dark:text-gray-400">Notes don’t ring — they just sit on your calendar for reference.</p>
-        ) : (
-          <div>
-            <label className={labelCls}>Early heads-up</label>
-            <select
-              value={draft.preAlarmMin ?? ''}
-              onChange={(e) => set({ preAlarmMin: e.target.value === '' ? null : Number(e.target.value) })}
-              className={`${fieldCls} mt-1`}
-            >
-              {PRE_ALARM_OPTIONS.map((o) => (
+          <div className={rowCls}>
+            <span className={rowLabelCls}>Repeat</span>
+            <select value={draft.repeat ?? ''} onChange={(e) => set({ repeat: e.target.value || null })} className={trailCls}>
+              {REPEAT_OPTIONS.map((o) => (
                 <option key={String(o.value)} value={o.value ?? ''}>
                   {o.label}
                 </option>
               ))}
             </select>
           </div>
-        )}
-
-        <div>
-          <label className={labelCls}>Repeat</label>
-          <select
-            value={draft.repeat ?? ''}
-            onChange={(e) => set({ repeat: e.target.value || null })}
-            className={`${fieldCls} mt-1`}
-          >
-            {REPEAT_OPTIONS.map((o) => (
-              <option key={String(o.value)} value={o.value ?? ''}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+          {!isNote && (
+            <div className={rowCls}>
+              <span className={rowLabelCls}>Early heads-up</span>
+              <select value={draft.preAlarmMin ?? ''} onChange={(e) => set({ preAlarmMin: e.target.value === '' ? null : Number(e.target.value) })} className={trailCls}>
+                {PRE_ALARM_OPTIONS.map((o) => (
+                  <option key={String(o.value)} value={o.value ?? ''}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
+        {isNote && <p className={noteCls}>Notes don’t ring - they just sit on your calendar for reference.</p>}
 
-        <div>
-          <label className={labelCls}>Steps</label>
-          <div className="space-y-2 mt-1.5">
-            {draft.subtasks.map((s) => (
-              <div key={s.id} className="flex items-center gap-2">
-                <button
-                  onClick={() => updateSub(s.id, { done: !s.done })}
-                  aria-label={s.done ? 'Uncheck step' : 'Check step'}
-                  className={`w-6 h-6 shrink-0 grid place-items-center rounded-md border-2 ${FOCUS_RING} ${
-                    s.done ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 dark:border-gray-600'
-                  }`}
-                />
+        {/* Steps */}
+        <div className={groupCls}>
+          <div className="px-4 py-3">
+            <p className={sectionCls}>Steps</p>
+            <div className="space-y-2">
+              {draft.subtasks.map((s) => (
+                <div key={s.id} className="flex items-center gap-2">
+                  <button
+                    onClick={() => updateSub(s.id, { done: !s.done })}
+                    aria-label={s.done ? 'Uncheck step' : 'Check step'}
+                    className={`w-6 h-6 shrink-0 grid place-items-center rounded-md border-2 ${FOCUS_RING} ${
+                      s.done ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                  />
+                  <input
+                    value={s.text}
+                    onChange={(e) => updateSub(s.id, { text: e.target.value })}
+                    className={`flex-1 text-sm bg-gray-100 dark:bg-gray-800 rounded-lg px-2.5 py-2 ${FOCUS_RING} ${
+                      s.done ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'
+                    }`}
+                  />
+                  <button onClick={() => removeSub(s.id)} aria-label="Remove step" className={`p-2 text-gray-400 dark:text-gray-500 hover:text-red-500 rounded-lg ${FOCUS_RING}`}>
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+              <div className="flex items-center gap-2">
                 <input
-                  value={s.text}
-                  onChange={(e) => updateSub(s.id, { text: e.target.value })}
-                  className={`flex-1 text-sm bg-gray-100 dark:bg-gray-800 rounded-lg px-2.5 py-2 ${FOCUS_RING} ${
-                    s.done ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'
-                  }`}
+                  value={newSub}
+                  onChange={(e) => setNewSub(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSub())}
+                  placeholder="Break it into one tiny step…"
+                  className={`flex-1 text-sm text-gray-900 dark:text-gray-100 bg-transparent border border-dashed border-gray-300 dark:border-gray-600 rounded-lg px-2.5 py-2 ${FOCUS_RING}`}
                 />
-                <button onClick={() => removeSub(s.id)} aria-label="Remove step" className={`p-2 text-gray-400 dark:text-gray-500 hover:text-red-500 rounded-lg ${FOCUS_RING}`}>
-                  <X size={16} />
+                <button onClick={addSub} aria-label="Add step" className={`p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg ${FOCUS_RING}`}>
+                  <Plus size={18} />
                 </button>
               </div>
-            ))}
-            <div className="flex items-center gap-2">
-              <input
-                value={newSub}
-                onChange={(e) => setNewSub(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSub())}
-                placeholder="Break it into one tiny step…"
-                className={`flex-1 text-sm text-gray-900 dark:text-gray-100 bg-transparent border border-dashed border-gray-300 dark:border-gray-600 rounded-lg px-2.5 py-2 ${FOCUS_RING}`}
-              />
-              <button onClick={addSub} aria-label="Add step" className={`p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg ${FOCUS_RING}`}>
-                <Plus size={18} />
-              </button>
             </div>
           </div>
         </div>
 
-        <p className="text-xs text-gray-500 dark:text-gray-400">Reminders fire while this tab is open — keep Skafld open during focus.</p>
+        <p className={noteCls}>Reminders fire while this tab is open - keep Skafld open during focus.</p>
 
-        <div className="flex items-center gap-2 pt-1">
+        <div className="flex items-center gap-2">
           <button onClick={save} className={`flex-1 text-base font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-3 rounded-xl ${FOCUS_RING}`}>
             Save
           </button>
@@ -171,7 +178,7 @@ function Toggle({ label, hint, checked, onChange }) {
   return (
     <label className="flex items-center justify-between gap-4 py-3 cursor-pointer">
       <span>
-        <span className="block text-base text-gray-800 dark:text-gray-100">{label}</span>
+        <span className="block text-[15px] text-gray-800 dark:text-gray-100">{label}</span>
         {hint && <span className="block text-xs text-gray-500 dark:text-gray-400">{hint}</span>}
       </span>
       <button
@@ -230,7 +237,7 @@ function PushSync({ onLinked, localCount = 0 }) {
       } else {
         await enablePush();
         setEnabled(true);
-        setMsg('Reminders on — they’ll reach you even when Skafld is closed.');
+        setMsg('Reminders on - they’ll reach you even when Skafld is closed.');
       }
     } catch (e) {
       setMsg(e.message || 'Could not turn on reminders.');
@@ -243,9 +250,9 @@ function PushSync({ onLinked, localCount = 0 }) {
     setMsg('');
     try {
       await api.testPush();
-      setMsg('Test sent — check your notifications.');
+      setMsg('Test sent - check your notifications.');
     } catch {
-      setMsg('Test failed — turn reminders on first.');
+      setMsg('Test failed - turn reminders on first.');
     }
     setBusy(false);
   };
@@ -272,7 +279,7 @@ function PushSync({ onLinked, localCount = 0 }) {
     if (api.setToken(pendingLink)) {
       setPendingLink('');
       setCode('');
-      setMsg('Linked — your items here are combined with that space (nothing is replaced).');
+      setMsg('Linked - your items here are combined with that space (nothing is replaced).');
       onLinked && onLinked();
     }
   };
@@ -288,7 +295,7 @@ function PushSync({ onLinked, localCount = 0 }) {
     <div className="py-3 space-y-3">
       <div className="flex items-center justify-between gap-4">
         <span>
-          <span className="flex items-center gap-1.5 text-base text-gray-800 dark:text-gray-100"><Bell size={16} /> Reminders when closed</span>
+          <span className="flex items-center gap-1.5 text-[15px] text-gray-800 dark:text-gray-100"><Bell size={16} /> Reminders when closed</span>
           <span className="block text-xs text-gray-500 dark:text-gray-400">Push notifications so reminders reach you even when the app is shut.</span>
         </span>
         <button
@@ -351,9 +358,9 @@ export function SettingsSheet({ open, settings, onClose, onChange, onLinked, loc
   const set = (patch) => onChange({ ...settings, ...patch });
   return (
     <BottomSheet open={open} title="Settings" onClose={onClose}>
-      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+      <div className={`${groupCls} divide-y divide-gray-100 dark:divide-gray-800 px-4`}>
         <div className="py-3">
-          <span className="block text-base text-gray-800 dark:text-gray-100">Theme</span>
+          <span className="block text-[15px] text-gray-800 dark:text-gray-100">Theme</span>
           <ChipRow
             value={settings.theme}
             onChange={(v) => set({ theme: v })}
@@ -374,7 +381,7 @@ export function SettingsSheet({ open, settings, onClose, onChange, onLinked, loc
           onChange={(v) => set({ motion: v ? 'reduced' : 'full' })}
         />
         <div className="py-3">
-          <span className="block text-base text-gray-800 dark:text-gray-100">Salience</span>
+          <span className="block text-[15px] text-gray-800 dark:text-gray-100">Salience</span>
           <span className="block text-xs text-gray-500 dark:text-gray-400">How loud should the good moments feel?</span>
           <ChipRow
             value={settings.salience}
@@ -387,7 +394,7 @@ export function SettingsSheet({ open, settings, onClose, onChange, onLinked, loc
           />
         </div>
         <div className="py-3">
-          <span className="block text-base text-gray-800 dark:text-gray-100">Default focus length</span>
+          <span className="block text-[15px] text-gray-800 dark:text-gray-100">Default focus length</span>
           <ChipRow
             value={settings.defaultFocusMin}
             onChange={(v) => set({ defaultFocusMin: v })}
@@ -395,7 +402,7 @@ export function SettingsSheet({ open, settings, onClose, onChange, onLinked, loc
           />
         </div>
       </div>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">Alarms and buzzes work while this tab is open.</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 px-1">Alarms and buzzes work while this tab is open.</p>
     </BottomSheet>
   );
 }

@@ -13,7 +13,7 @@ export function useNow(intervalMs = 15000) {
   return now;
 }
 
-// Central reward primitive — reads settings before making any sound/motion.
+// Central reward primitive - reads settings before making any sound/motion.
 // `reduced` is the effective reduced-motion (in-app setting OR OS preference).
 export function useReward(settings, reduced) {
   return useMemo(() => {
@@ -42,7 +42,7 @@ function notify(item, kind) {
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       const title =
         kind === 'pre'
-          ? `Heads up — “${item.title}” soon`
+          ? `Heads up - “${item.title}” soon`
           : `Now: ${item.title}`;
       new Notification(title, { body: kind === 'pre' ? 'Want to wrap up first?' : undefined });
     }

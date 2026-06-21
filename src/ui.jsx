@@ -109,7 +109,7 @@ export function BottomSheet({ open, onClose, title, children }) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative z-10 w-full sm:max-w-md bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-2xl shadow-xl px-5 pb-5 pt-2 sm:p-6 fs-sheet max-h-[88dvh] overflow-y-auto"
+        className="relative z-10 w-full sm:max-w-md bg-gray-100 dark:bg-gray-950 rounded-t-3xl sm:rounded-2xl shadow-xl px-4 pb-5 pt-2 sm:p-5 fs-sheet max-h-[88dvh] overflow-y-auto"
       >
         <div className="mx-auto mt-1 mb-3 h-1.5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 sm:hidden" aria-hidden />
         <div className="flex items-center justify-between mb-4">
@@ -157,7 +157,7 @@ export function Toast({ message, action }) {
   );
 }
 
-// Detects an increment and briefly pops — used by the "Done today" pill.
+// Detects an increment and briefly pops - used by the "Done today" pill.
 export function usePopOnIncrease(value, reduced) {
   const [pop, setPop] = useState(false);
   const prev = useRef(value);

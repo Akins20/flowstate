@@ -277,7 +277,7 @@ export default function App() {
       setOverlay({ kind: 'none', editItemId: null });
       if (wasUnsorted && nowSorted) {
         reward.sorted();
-        showToast('Sorted — nice');
+        showToast('Sorted - nice');
       }
       maybeRequestNotif(edited);
     },
@@ -367,11 +367,11 @@ export default function App() {
   const banner = useMemo(() => {
     if (zones.now) {
       const ms = itemMs(zones.now);
-      if (ms != null && ms < nowMs) return `Still here: ${zones.now.title} — whenever you’re ready`;
-      return `Next: ${zones.now.title} — ${inLabel(ms, nowMs)}`;
+      if (ms != null && ms < nowMs) return `Still here: ${zones.now.title} - whenever you’re ready`;
+      return `Next: ${zones.now.title} - ${inLabel(ms, nowMs)}`;
     }
-    if (zones.next.length) return 'A few things still here — pick what fits today';
-    return 'Clear deck — nothing on the clock';
+    if (zones.next.length) return 'A few things still here - pick what fits today';
+    return 'Clear deck - nothing on the clock';
   }, [zones, nowMs]);
 
   const focusItem = session ? items.find((it) => it.id === session.itemId) || null : null;
